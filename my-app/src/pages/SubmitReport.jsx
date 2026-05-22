@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, doc, setDoc, getDoc, serverTimestamp, addDoc } from "firebase/firestore";
@@ -18,21 +18,24 @@ L.Icon.Default.mergeOptions({
 });
 
 
-function LocationMarker({ position, setPosition, setLocationName, updateForm }) {
+function LocationMarker({ position, onLocationChange }) {
   useMapEvents({
     async click(e) {
-      setPosition(e.latlng);
+      const point = { lat: e.latlng.lat, lng: e.latlng.lng };
+      onLocationChange({
+        markerPosition: point,
+        latitude: point.lat,
+        longitude: point.lng,
+        locationName: "Loading address...",
+      });
       try {
-        setLocationName("Loading address...");
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}`);
         const data = await res.json();
         const address = data.display_name || `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
-        setLocationName(address);
-        updateForm("locationAddress", address);
-      } catch (err) {
+        onLocationChange({ locationName: address, locationAddress: address });
+      } catch {
         const fallback = `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
-        setLocationName(fallback);
-        updateForm("locationAddress", fallback);
+        onLocationChange({ locationName: fallback, locationAddress: fallback });
       }
     },
   });
@@ -58,33 +61,67 @@ export default function SubmitReport() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reportId, setReportId] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [locationName, setLocationName] = useState("No location selected yet");
-  const [markerPosition, setMarkerPosition] = useState(null);
+  const [fullscreenPreview, setFullscreenPreview] = useState(null);
   const searchTimeoutRef = useRef(null);
   const searchContainerRef = useRef(null);
 
   // Form State
   const [formData, setFormData] = useState({
     reportType: "Individual",
-    locationAddress: "",
-    latitude: 14.6760, // Default Manila
-    longitude: 121.0437,
     approximateAge: "",
     sex: "",
     description: "",
     seenAt: "",
     assistanceDescription: "",
     contactNumber: "",
-    photoFiles: [],
-    photoPreviews: []
   });
+
+  const [reportTypeData, setReportTypeData] = useState({
+    Individual: {
+      locationAddress: "",
+      locationName: "No individual location selected yet",
+      latitude: 14.6760,
+      longitude: 121.0437,
+      markerPosition: null,
+      searchQuery: "",
+      photoFiles: [],
+      photoPreviews: [],
+    },
+    Animal: {
+      locationAddress: "",
+      locationName: "No animal location selected yet",
+      latitude: 14.6760,
+      longitude: 121.0437,
+      markerPosition: null,
+      searchQuery: "",
+      photoFiles: [],
+      photoPreviews: [],
+    },
+  });
+
+  const activeReportData = reportTypeData[formData.reportType];
 
   const updateForm = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateActiveReportData = (updates) => {
+    setReportTypeData(prev => ({
+      ...prev,
+      [formData.reportType]: {
+        ...prev[formData.reportType],
+        ...updates,
+      },
+    }));
+  };
+
+  const changeReportType = (reportType) => {
+    updateForm("reportType", reportType);
+    setSearchResults([]);
+    setShowSuggestions(false);
   };
 
   useEffect(() => {
@@ -96,8 +133,10 @@ export default function SubmitReport() {
           if (docSnap.exists()) {
             const data = docSnap.data();
             setUserProfile(data);
-            if (data.contactNumber && !formData.contactNumber) {
-              updateForm("contactNumber", data.contactNumber);
+            if (data.contactNumber) {
+              setFormData(prev => (
+                prev.contactNumber ? prev : { ...prev, contactNumber: data.contactNumber }
+              ));
             }
           }
         } catch (e) {
@@ -112,25 +151,35 @@ export default function SubmitReport() {
 
   // Automatically request the user's current location on mount
   useEffect(() => {
+    const updateInitialLocation = (updates) => {
+      setReportTypeData(prev => ({
+        ...prev,
+        Individual: {
+          ...prev.Individual,
+          ...updates,
+        },
+      }));
+    };
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        updateForm("latitude", lat);
-        updateForm("longitude", lng);
-        setMarkerPosition({ lat, lng });
+        updateInitialLocation({
+          latitude: lat,
+          longitude: lng,
+          markerPosition: { lat, lng },
+          locationName: "Loading address...",
+        });
         
         try {
-          setLocationName("Loading address...");
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
           const data = await res.json();
           const address = data.display_name || `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
-          setLocationName(address);
-          updateForm("locationAddress", address);
-        } catch (err) {
+          updateInitialLocation({ locationName: address, locationAddress: address });
+        } catch {
           const fallback = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
-          setLocationName(fallback);
-          updateForm("locationAddress", fallback);
+          updateInitialLocation({ locationName: fallback, locationAddress: fallback });
         }
       }, (err) => {
         console.warn("Auto-location permission denied or failed:", err);
@@ -142,24 +191,25 @@ export default function SubmitReport() {
   const handlePhotoSelect = (e) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      updateForm("photoFiles", [...formData.photoFiles, ...files]);
+      updateActiveReportData({ photoFiles: [...activeReportData.photoFiles, ...files] });
       const newPreviews = files.map(file => URL.createObjectURL(file));
-      updateForm("photoPreviews", [...formData.photoPreviews, ...newPreviews]);
+      updateActiveReportData({ photoPreviews: [...activeReportData.photoPreviews, ...newPreviews] });
+      e.target.value = "";
     }
   };
 
   const removePhoto = (index) => {
-    const newFiles = [...formData.photoFiles];
+    const newFiles = [...activeReportData.photoFiles];
     newFiles.splice(index, 1);
-    const newPreviews = [...formData.photoPreviews];
+    const newPreviews = [...activeReportData.photoPreviews];
+    URL.revokeObjectURL(newPreviews[index]);
     newPreviews.splice(index, 1);
-    updateForm("photoFiles", newFiles);
-    updateForm("photoPreviews", newPreviews);
+    updateActiveReportData({ photoFiles: newFiles, photoPreviews: newPreviews });
   };
 
   // Dynamic search with debounce
-  const handleSearchInput = useCallback((value) => {
-    setSearchQuery(value);
+  const handleSearchInput = (value) => {
+    updateActiveReportData({ searchQuery: value });
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
     if (!value.trim() || value.trim().length < 3) {
@@ -181,17 +231,19 @@ export default function SubmitReport() {
         setIsSearching(false);
       }
     }, 400);
-  }, []);
+  };
 
   const selectSearchResult = (result) => {
     const newLat = parseFloat(result.lat);
     const newLng = parseFloat(result.lon);
-    updateForm("latitude", newLat);
-    updateForm("longitude", newLng);
-    setMarkerPosition({ lat: newLat, lng: newLng });
-    setLocationName(result.display_name);
-    updateForm("locationAddress", result.display_name);
-    setSearchQuery(result.display_name);
+    updateActiveReportData({
+      latitude: newLat,
+      longitude: newLng,
+      markerPosition: { lat: newLat, lng: newLng },
+      locationName: result.display_name,
+      locationAddress: result.display_name,
+      searchQuery: result.display_name,
+    });
     setShowSuggestions(false);
     setSearchResults([]);
   };
@@ -212,21 +264,21 @@ export default function SubmitReport() {
       navigator.geolocation.getCurrentPosition(async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        updateForm("latitude", lat);
-        updateForm("longitude", lng);
-        setMarkerPosition({ lat, lng });
+        updateActiveReportData({
+          latitude: lat,
+          longitude: lng,
+          markerPosition: { lat, lng },
+          locationName: "Loading address...",
+        });
         
         try {
-          setLocationName("Loading address...");
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
           const data = await res.json();
           const address = data.display_name || `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
-          setLocationName(address);
-          updateForm("locationAddress", address);
-        } catch (err) {
+          updateActiveReportData({ locationName: address, locationAddress: address });
+        } catch {
           const fallback = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
-          setLocationName(fallback);
-          updateForm("locationAddress", fallback);
+          updateActiveReportData({ locationName: fallback, locationAddress: fallback });
         }
 
       }, (err) => {
@@ -243,8 +295,16 @@ export default function SubmitReport() {
   };
 
   const goToStep2 = () => {
+    if (!activeReportData.markerPosition || !activeReportData.locationAddress) {
+      alert(`Please select a location for the ${formData.reportType.toLowerCase()} report.`);
+      return;
+    }
     if (!formData.description.trim()) {
       alert("Please provide a brief description.");
+      return;
+    }
+    if (formData.reportType === "Animal" && activeReportData.photoFiles.length === 0) {
+      alert("Please upload a photo for the animal report.");
       return;
     }
     setStep(2);
@@ -259,11 +319,12 @@ export default function SubmitReport() {
     setIsSubmitting(true);
     
     try {
+      const currentReportData = reportTypeData[formData.reportType];
       // 1. Upload photos if exists
       let uploadedPhotoUrl = "";
       let uploadedPhotoUrls = [];
-      if (formData.photoFiles && formData.photoFiles.length > 0) {
-        const uploadPromises = formData.photoFiles.map(file => uploadImageToCloudinary(file));
+      if (currentReportData.photoFiles && currentReportData.photoFiles.length > 0) {
+        const uploadPromises = currentReportData.photoFiles.map(file => uploadImageToCloudinary(file));
         uploadedPhotoUrls = await Promise.all(uploadPromises);
         uploadedPhotoUrl = uploadedPhotoUrls[0]; // fallback for backward compat
       }
@@ -285,11 +346,11 @@ export default function SubmitReport() {
         userId: uid,
         userEmail: email,
         fullName: fullName,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
-        locationAddress: formData.locationAddress,
-        approximateAge: formData.approximateAge,
-        sex: formData.sex,
+        latitude: currentReportData.latitude,
+        longitude: currentReportData.longitude,
+        locationAddress: currentReportData.locationAddress,
+        approximateAge: formData.reportType === "Individual" ? formData.approximateAge : "N/A",
+        sex: formData.reportType === "Individual" ? formData.sex : "N/A",
         description: formData.description,
         assistanceDescription: formData.assistanceDescription,
         contactNumber: formData.contactNumber,
@@ -308,7 +369,7 @@ export default function SubmitReport() {
       // 4. Create Admin Notification
       await addDoc(collection(db, "admin_notifications"), {
         title: `New ${formData.reportType} Report`,
-        message: `${fullName} submitted a new ${formData.reportType.toLowerCase()} report (${generatedReportId}) at ${formData.locationAddress}`,
+        message: `${fullName} submitted a new ${formData.reportType.toLowerCase()} report (${generatedReportId}) at ${currentReportData.locationAddress}`,
         createdAt: serverTimestamp(),
         isRead: false,
         type: "new_report",
@@ -381,13 +442,13 @@ export default function SubmitReport() {
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">What are you reporting?</label>
                 <div className="flex bg-gray-100 p-1 rounded-xl">
                   <button 
-                    onClick={() => updateForm("reportType", "Individual")}
+                    onClick={() => changeReportType("Individual")}
                     className={`flex-1 py-3 text-sm font-bold rounded-lg transition-colors ${formData.reportType === "Individual" ? "bg-white text-[#4169E1] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Individual
                   </button>
                   <button 
-                    onClick={() => updateForm("reportType", "Animal")}
+                    onClick={() => changeReportType("Animal")}
                     className={`flex-1 py-3 text-sm font-bold rounded-lg transition-colors ${formData.reportType === "Animal" ? "bg-white text-[#4169E1] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                   >
                     Animal
@@ -406,7 +467,7 @@ export default function SubmitReport() {
                   </div>
                   <input 
                     type="text" 
-                    value={searchQuery}
+                    value={activeReportData.searchQuery}
                     onChange={(e) => handleSearchInput(e.target.value)}
                     onFocus={() => searchResults.length > 0 && setShowSuggestions(true)}
                     placeholder="Search a location..."
@@ -437,14 +498,12 @@ export default function SubmitReport() {
 
                 {/* Map Container */}
                 <div className="h-[250px] rounded-xl overflow-hidden border border-gray-200 relative z-0">
-                  <MapContainer center={[formData.latitude, formData.longitude]} zoom={15} style={{ height: "100%", width: "100%" }}>
-                    <MapUpdater center={[formData.latitude, formData.longitude]} />
+                  <MapContainer center={[activeReportData.latitude, activeReportData.longitude]} zoom={15} style={{ height: "100%", width: "100%" }}>
+                    <MapUpdater center={[activeReportData.latitude, activeReportData.longitude]} />
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <LocationMarker 
-                      position={markerPosition} 
-                      setPosition={(pos) => { updateForm("latitude", pos.lat); updateForm("longitude", pos.lng); setMarkerPosition(pos); }}
-                      setLocationName={setLocationName}
-                      updateForm={updateForm}
+                      position={activeReportData.markerPosition} 
+                      onLocationChange={updateActiveReportData}
                     />
                   </MapContainer>
                   <button 
@@ -460,19 +519,28 @@ export default function SubmitReport() {
                 {/* Selected Location Text View */}
                 <div className="flex items-center gap-3 p-3 mt-1 bg-[#EDF2FF] border border-[#D1D9FF] rounded-xl shadow-sm">
                   <svg className="w-5 h-5 text-[#4169E1] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                  <span className="text-sm text-gray-700 font-medium line-clamp-2">{locationName}</span>
+                  <span className="text-sm text-gray-700 font-medium line-clamp-2">{activeReportData.locationName}</span>
                 </div>
               </div>
 
               {/* Photo Upload */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Photo (Optional)</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Photo {formData.reportType === "Animal" ? "(Required)" : "(Optional)"}
+                </label>
                 
-                {formData.photoPreviews.length > 0 && (
+                {activeReportData.photoPreviews.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
-                    {formData.photoPreviews.map((preview, idx) => (
-                      <div key={idx} className="relative h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 group">
-                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                    {activeReportData.photoPreviews.map((preview, idx) => (
+                      <div key={preview} className="relative h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 group">
+                        <button
+                          type="button"
+                          onClick={() => setFullscreenPreview(preview)}
+                          className="w-full h-full block"
+                          aria-label="View uploaded photo"
+                        >
+                          <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                        </button>
                         <button 
                           onClick={() => removePhoto(idx)}
                           className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center hover:bg-red-600 shadow-md opacity-90 group-hover:opacity-100 transition-opacity"
@@ -645,6 +713,29 @@ export default function SubmitReport() {
 
         </div>
       </div>
+
+      {fullscreenPreview && (
+        <div
+          className="fixed inset-0 z-[70] bg-black flex items-center justify-center p-4"
+          onClick={() => setFullscreenPreview(null)}
+        >
+          <button
+            type="button"
+            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 grid place-items-center"
+            aria-label="Close image preview"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={fullscreenPreview}
+            alt="Uploaded preview"
+            className="max-w-full max-h-[92vh] object-contain rounded-lg shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

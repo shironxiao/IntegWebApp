@@ -3,6 +3,16 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-2x-red.png",
+  iconUrl: "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-red.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return "—";
@@ -55,28 +65,72 @@ const extractProofUrls = (report) => {
   return Array.from(urls).filter(url => url);
 };
 
+const isAnimalReport = (report) => {
+  return (report?.reportType || "").toLowerCase() === "animal"
+    || (report?.approximateAge === "N/A" && report?.sex === "N/A");
+};
+
+const hasReportLocation = (report) => report?.latitude != null && report?.longitude != null;
+
+const normalizeFilterStatus = (filterStatus) => {
+  if (filterStatus === "Verified" || filterStatus === "Pending") return "Pending";
+  if (filterStatus === "In Progress") return "In Progress";
+  if (filterStatus === "Resolved") return "Resolved";
+  return "All";
+};
+
+function MapUpdater({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+  return null;
+}
+
+function LocationModal({ report, onClose }) {
+  const center = [report.latitude, report.longitude];
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-4xl h-[84vh] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Last Seen Location</p>
+            <h2 className="text-lg font-black text-gray-800">{report.reportId || report.id?.substring(0, 8)}</h2>
+            <p className="text-sm text-gray-500 line-clamp-1">{report.locationAddress || "No address available."}</p>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 grid place-items-center" aria-label="Close map">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1">
+          <MapContainer center={center} zoom={17} className="h-full w-full">
+            <MapUpdater center={center} />
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <Marker position={center} />
+          </MapContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Report() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentUser, setCurrentUser] = useState(null);
-  
   const [reports, setReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentFilter, setCurrentFilter] = useState("All");
+  const [currentFilter, setCurrentFilter] = useState(() => normalizeFilterStatus(location.state?.filter_status));
 
   const [selectedReport, setSelectedReport] = useState(null); // For Details Modal
   const [proofReport, setProofReport] = useState(null); // For Proof Images Modal
   const [fullscreenImage, setFullscreenImage] = useState(null);
+  const [locationReport, setLocationReport] = useState(null);
 
   useEffect(() => {
     if (location.state && location.state.filter_status) {
-      let fStatus = location.state.filter_status;
-      if (fStatus === "Verified" || fStatus === "Pending") fStatus = "Pending";
-      else if (fStatus === "In Progress") fStatus = "In Progress";
-      else if (fStatus === "Resolved") fStatus = "Resolved";
-      else fStatus = "All";
-      setCurrentFilter(fStatus);
-      
       // Clear state so it doesn't re-apply on refresh
       window.history.replaceState({}, document.title)
     }
@@ -85,7 +139,6 @@ export default function Report() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        setCurrentUser(user);
         const q = query(collection(db, "reports"), where("userId", "==", user.uid));
         
         const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
@@ -195,6 +248,7 @@ export default function Report() {
               const assistance = report.assistanceDescription || "—";
               const isResolved = statusStr.toLowerCase().includes("resolved") || statusStr.toLowerCase().includes("closed");
               const proofUrls = extractProofUrls(report);
+              const isAnimal = isAnimalReport(report);
 
               return (
                 <div key={report.id} className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
@@ -215,6 +269,8 @@ export default function Report() {
                     </h3>
 
                     <div className="grid grid-cols-2 gap-y-2 gap-x-4 mb-4">
+                      {!isAnimal && (
+                        <>
                       <div className="flex items-start gap-2">
                         <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         <div className="text-[13px]">
@@ -227,12 +283,22 @@ export default function Report() {
                           <span className="text-gray-500">Sex: </span><span className="font-medium text-gray-700">{report.sex || "—"}</span>
                         </div>
                       </div>
-                      <div className="flex items-start gap-2 col-span-2">
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (hasReportLocation(report)) setLocationReport(report);
+                        }}
+                        disabled={!hasReportLocation(report)}
+                        className="flex items-start gap-2 col-span-2 text-left disabled:cursor-default"
+                      >
                         <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         <div className="text-[13px]">
-                          <span className="font-medium text-gray-700 line-clamp-1">{report.locationAddress || "Location not set"}</span>
+                          <span className={`font-medium line-clamp-1 ${hasReportLocation(report) ? "text-[#4169E1] hover:underline" : "text-gray-700"}`}>{report.locationAddress || "Location not set"}</span>
                         </div>
-                      </div>
+                      </button>
                       <div className="flex items-start gap-2 col-span-2">
                         <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                         <div className="text-[13px]">
@@ -321,6 +387,7 @@ export default function Report() {
                   <p className="text-sm text-gray-800 font-medium leading-relaxed">{selectedReport.description || "No description provided."}</p>
                 </div>
 
+                {!isAnimalReport(selectedReport) && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Age</span>
@@ -331,13 +398,19 @@ export default function Report() {
                     <p className="text-sm text-gray-800 font-medium">{selectedReport.sex || "—"}</p>
                   </div>
                 </div>
+                )}
 
                 <div>
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Location</span>
-                  <div className="flex items-start gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => hasReportLocation(selectedReport) && setLocationReport(selectedReport)}
+                    disabled={!hasReportLocation(selectedReport)}
+                    className="w-full flex items-start gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100 text-left disabled:cursor-default"
+                  >
                     <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    <p className="text-sm text-gray-800 font-medium">{selectedReport.locationAddress || "No address available."}</p>
-                  </div>
+                    <p className={`text-sm font-medium ${hasReportLocation(selectedReport) ? "text-[#4169E1]" : "text-gray-800"}`}>{selectedReport.locationAddress || "No address available."}</p>
+                  </button>
                 </div>
 
                 <div>
@@ -446,6 +519,10 @@ export default function Report() {
           </button>
           <img src={fullscreenImage} alt="Fullscreen Proof" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
         </div>
+      )}
+
+      {locationReport && (
+        <LocationModal report={locationReport} onClose={() => setLocationReport(null)} />
       )}
 
     </div>

@@ -188,7 +188,7 @@ export default function Home() {
         
         {/* Action Card: Submit New Report */}
         <div 
-          onClick={() => navigate("/report")} 
+          onClick={() => navigate("/report/new")} 
           className="bg-white rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.08)] flex items-center justify-between cursor-pointer hover:scale-[1.02] transition-transform duration-200 border border-gray-100"
         >
           <div className="flex items-center gap-4">
