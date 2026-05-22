@@ -202,17 +202,6 @@ export default function Login() {
   }
 
   // =========================================================================
-  //  Continue as Guest (mirrors Android continueAsGuest)
-  // =========================================================================
-
-  function continueAsGuest() {
-    navigate("/home", {
-      replace: true,
-      state: { is_guest: true, role: "guest" },
-    });
-  }
-
-  // =========================================================================
   //  Toast helper
   // =========================================================================
 
@@ -487,17 +476,6 @@ export default function Login() {
         </div>
       </div>
 
-      {/* ── Continue as Guest (bottom link) ──────────────────────────────── */}
-      <div className="relative z-10 flex justify-center py-6">
-        <button
-          id="tvContinueAsGuest"
-          type="button"
-          onClick={continueAsGuest}
-          className="text-sm font-medium text-blue-500 hover:text-blue-600 hover:underline transition-colors"
-        >
-          Sign in as Guest
-        </button>
-      </div>
     </div>
   );
 }
