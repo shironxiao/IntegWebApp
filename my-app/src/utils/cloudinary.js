@@ -1,13 +1,13 @@
 const CLOUD_NAME = "durqaiei1";
 const UPLOAD_PRESET = "streetassist_unsigned";
-const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
 
 /**
- * Uploads an image file to Cloudinary using unsigned upload preset.
- * @param {File} file - The image file to upload (from an input type="file")
- * @returns {Promise<string>} The secure URL of the uploaded image
+ * Uploads an image or video file to Cloudinary using unsigned upload preset.
+ * @param {File} file - The media file to upload
+ * @returns {Promise<{ url: string, resourceType: string, publicId: string }>}
  */
-export const uploadImageToCloudinary = async (file) => {
+export const uploadMediaToCloudinary = async (file) => {
   if (!file) throw new Error("No file provided");
 
   const formData = new FormData();
@@ -26,9 +26,18 @@ export const uploadImageToCloudinary = async (file) => {
     }
 
     const data = await response.json();
-    return data.secure_url;
+    return {
+      url: data.secure_url,
+      resourceType: data.resource_type || "image",
+      publicId: data.public_id || "",
+    };
   } catch (error) {
     console.error("Cloudinary upload error:", error);
     throw error;
   }
+};
+
+export const uploadImageToCloudinary = async (file) => {
+  const result = await uploadMediaToCloudinary(file);
+  return result.url;
 };

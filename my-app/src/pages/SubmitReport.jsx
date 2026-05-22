@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, doc, setDoc, getDoc, serverTimestamp, addDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
-import { uploadImageToCloudinary } from "../utils/cloudinary";
+import { uploadMediaToCloudinary } from "../utils/cloudinary";
 import { notifyReportSubmitted } from "../hooks/useReportStatusWatcher";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -53,6 +53,14 @@ function MapUpdater({ center }) {
   return null;
 }
 
+function buildMediaPreview(file) {
+  return {
+    url: URL.createObjectURL(file),
+    type: file.type.startsWith("video/") ? "video" : "image",
+    name: file.name,
+  };
+}
+
 export default function SubmitReport() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
@@ -67,6 +75,10 @@ export default function SubmitReport() {
   const [fullscreenPreview, setFullscreenPreview] = useState(null);
   const searchTimeoutRef = useRef(null);
   const searchContainerRef = useRef(null);
+  const reportTypeDataRef = useRef(null);
+  const capturePhotoInputRef = useRef(null);
+  const captureVideoInputRef = useRef(null);
+  const uploadMediaInputRef = useRef(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -87,8 +99,8 @@ export default function SubmitReport() {
       longitude: 121.0437,
       markerPosition: null,
       searchQuery: "",
-      photoFiles: [],
-      photoPreviews: [],
+      mediaFiles: [],
+      mediaPreviews: [],
     },
     Animal: {
       locationAddress: "",
@@ -97,12 +109,16 @@ export default function SubmitReport() {
       longitude: 121.0437,
       markerPosition: null,
       searchQuery: "",
-      photoFiles: [],
-      photoPreviews: [],
+      mediaFiles: [],
+      mediaPreviews: [],
     },
   });
 
   const activeReportData = reportTypeData[formData.reportType];
+
+  useEffect(() => {
+    reportTypeDataRef.current = reportTypeData;
+  }, [reportTypeData]);
 
   const updateForm = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -187,24 +203,36 @@ export default function SubmitReport() {
     }
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (!reportTypeDataRef.current) return;
+      Object.values(reportTypeDataRef.current).forEach((reportData) => {
+        reportData.mediaPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+      });
+    };
+  }, []);
 
-  const handlePhotoSelect = (e) => {
+  const handleMediaSelect = (e) => {
     if (e.target.files) {
-      const files = Array.from(e.target.files);
-      updateActiveReportData({ photoFiles: [...activeReportData.photoFiles, ...files] });
-      const newPreviews = files.map(file => URL.createObjectURL(file));
-      updateActiveReportData({ photoPreviews: [...activeReportData.photoPreviews, ...newPreviews] });
+      const files = Array.from(e.target.files).filter((file) =>
+        file.type.startsWith("image/") || file.type.startsWith("video/")
+      );
+      const previews = files.map(buildMediaPreview);
+      updateActiveReportData({
+        mediaFiles: [...activeReportData.mediaFiles, ...files],
+        mediaPreviews: [...activeReportData.mediaPreviews, ...previews],
+      });
       e.target.value = "";
     }
   };
 
-  const removePhoto = (index) => {
-    const newFiles = [...activeReportData.photoFiles];
+  const removeMedia = (index) => {
+    const newFiles = [...activeReportData.mediaFiles];
     newFiles.splice(index, 1);
-    const newPreviews = [...activeReportData.photoPreviews];
-    URL.revokeObjectURL(newPreviews[index]);
+    const newPreviews = [...activeReportData.mediaPreviews];
+    URL.revokeObjectURL(newPreviews[index].url);
     newPreviews.splice(index, 1);
-    updateActiveReportData({ photoFiles: newFiles, photoPreviews: newPreviews });
+    updateActiveReportData({ mediaFiles: newFiles, mediaPreviews: newPreviews });
   };
 
   // Dynamic search with debounce
@@ -303,8 +331,8 @@ export default function SubmitReport() {
       alert("Please provide a brief description.");
       return;
     }
-    if (formData.reportType === "Animal" && activeReportData.photoFiles.length === 0) {
-      alert("Please upload a photo for the animal report.");
+    if (formData.reportType === "Animal" && activeReportData.mediaFiles.length === 0) {
+      alert("Please add at least one image or video for the animal report.");
       return;
     }
     setStep(2);
@@ -320,13 +348,32 @@ export default function SubmitReport() {
     
     try {
       const currentReportData = reportTypeData[formData.reportType];
-      // 1. Upload photos if exists
+      // 1. Upload media if present
       let uploadedPhotoUrl = "";
       let uploadedPhotoUrls = [];
-      if (currentReportData.photoFiles && currentReportData.photoFiles.length > 0) {
-        const uploadPromises = currentReportData.photoFiles.map(file => uploadImageToCloudinary(file));
-        uploadedPhotoUrls = await Promise.all(uploadPromises);
-        uploadedPhotoUrl = uploadedPhotoUrls[0]; // fallback for backward compat
+      let uploadedVideoUrl = "";
+      let uploadedVideoUrls = [];
+      let uploadedMedia = [];
+      if (currentReportData.mediaFiles && currentReportData.mediaFiles.length > 0) {
+        uploadedMedia = await Promise.all(
+          currentReportData.mediaFiles.map(async (file) => {
+            const result = await uploadMediaToCloudinary(file);
+            return {
+              url: result.url,
+              resourceType: result.resourceType,
+              publicId: result.publicId,
+              originalName: file.name,
+            };
+          })
+        );
+        uploadedPhotoUrls = uploadedMedia
+          .filter((item) => item.resourceType === "image")
+          .map((item) => item.url);
+        uploadedVideoUrls = uploadedMedia
+          .filter((item) => item.resourceType === "video")
+          .map((item) => item.url);
+        uploadedPhotoUrl = uploadedPhotoUrls[0] || "";
+        uploadedVideoUrl = uploadedVideoUrls[0] || "";
       }
 
       // 2. Prepare Data
@@ -358,6 +405,9 @@ export default function SubmitReport() {
         reportType: formData.reportType,
         photoUrl: uploadedPhotoUrl,
         photoUrls: uploadedPhotoUrls,
+        videoUrl: uploadedVideoUrl,
+        videoUrls: uploadedVideoUrls,
+        media: uploadedMedia,
         status: "Pending",
         timestamp: serverTimestamp(),
         isHiddenByResident: false
@@ -523,40 +573,95 @@ export default function SubmitReport() {
                 </div>
               </div>
 
-              {/* Photo Upload */}
+              {/* Media Upload */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                  Photo {formData.reportType === "Animal" ? "(Required)" : "(Optional)"}
+                  Media {formData.reportType === "Animal" ? "(Required)" : "(Optional)"}
                 </label>
                 
-                {activeReportData.photoPreviews.length > 0 && (
+                {activeReportData.mediaPreviews.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
-                    {activeReportData.photoPreviews.map((preview, idx) => (
-                      <div key={preview} className="relative h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 group">
+                    {activeReportData.mediaPreviews.map((preview, idx) => (
+                      <div key={`${preview.url}-${idx}`} className="relative h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 group">
                         <button
                           type="button"
                           onClick={() => setFullscreenPreview(preview)}
                           className="w-full h-full block"
-                          aria-label="View uploaded photo"
+                          aria-label="View uploaded media"
                         >
-                          <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                          {preview.type === "video" ? (
+                            <video src={preview.url} className="w-full h-full object-cover" muted playsInline />
+                          ) : (
+                            <img src={preview.url} alt="Preview" className="w-full h-full object-cover" />
+                          )}
                         </button>
                         <button 
-                          onClick={() => removePhoto(idx)}
+                          onClick={() => removeMedia(idx)}
                           className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center hover:bg-red-600 shadow-md opacity-90 group-hover:opacity-100 transition-opacity"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
+                        {preview.type === "video" && (
+                          <div className="absolute left-1 top-1 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            Video
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
-                
-                <label className="w-full h-16 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-[#4169E1] transition-colors">
-                  <svg className="w-6 h-6 text-[#4169E1] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L28 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  <span className="text-sm font-bold text-[#4169E1]">Upload Photo(s)</span>
-                  <input type="file" accept="image/*" multiple onChange={handlePhotoSelect} className="hidden" />
-                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => capturePhotoInputRef.current?.click()}
+                    className="h-16 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#4169E1] hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm font-bold text-[#4169E1]"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7.5A2.25 2.25 0 0 1 5.25 5.25h1.386a2.25 2.25 0 0 0 1.59-.659l.515-.515A2.25 2.25 0 0 1 10.332 3h3.336a2.25 2.25 0 0 1 1.591.659l.515.515a2.25 2.25 0 0 0 1.59.659h1.386A2.25 2.25 0 0 1 21 7.5v9.75A2.25 2.25 0 0 1 18.75 19.5H5.25A2.25 2.25 0 0 1 3 17.25V7.5Z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" /></svg>
+                    Capture Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => captureVideoInputRef.current?.click()}
+                    className="h-16 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#4169E1] hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm font-bold text-[#4169E1]"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m15.75 10.5 4.72-2.36A.75.75 0 0 1 21.75 8.81v6.38a.75.75 0 0 1-1.28.67l-4.72-2.36m0-3v3m-10.5 5.25h9a2.25 2.25 0 0 0 2.25-2.25v-7.5a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 3 9v7.5a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+                    Capture Video
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => uploadMediaInputRef.current?.click()}
+                    className="h-16 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#4169E1] hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm font-bold text-[#4169E1]"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v.75A2.25 2.25 0 0 0 5.25 19.5h13.5A2.25 2.25 0 0 0 21 17.25v-.75M7.5 10.5 12 6m0 0 4.5 4.5M12 6v12" /></svg>
+                    Upload Media
+                  </button>
+                </div>
+
+                <input
+                  ref={capturePhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleMediaSelect}
+                  className="hidden"
+                />
+                <input
+                  ref={captureVideoInputRef}
+                  type="file"
+                  accept="video/*"
+                  capture="environment"
+                  onChange={handleMediaSelect}
+                  className="hidden"
+                />
+                <input
+                  ref={uploadMediaInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleMediaSelect}
+                  className="hidden"
+                />
               </div>
 
               {/* Grid: Age & Sex (Conditional) */}
@@ -728,12 +833,22 @@ export default function SubmitReport() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>
-          <img
-            src={fullscreenPreview}
-            alt="Uploaded preview"
-            className="max-w-full max-h-[92vh] object-contain rounded-lg shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          />
+          {fullscreenPreview.type === "video" ? (
+            <video
+              src={fullscreenPreview.url}
+              controls
+              playsInline
+              className="max-w-full max-h-[92vh] rounded-lg shadow-2xl bg-black"
+              onClick={(event) => event.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={fullscreenPreview.url}
+              alt="Uploaded preview"
+              className="max-w-full max-h-[92vh] object-contain rounded-lg shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            />
+          )}
         </div>
       )}
     </div>
