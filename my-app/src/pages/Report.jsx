@@ -65,6 +65,40 @@ const extractProofUrls = (report) => {
   return Array.from(urls).filter(url => url);
 };
 
+const extractReportMedia = (report) => {
+  const media = [];
+  const seen = new Set();
+
+  const addMedia = (url, type = "image") => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    media.push({ url, type });
+  };
+
+  if (Array.isArray(report?.media)) {
+    report.media.forEach((item) => {
+      if (item?.url) {
+        const type = item.resourceType === "video" ? "video" : "image";
+        addMedia(item.url, type);
+      }
+    });
+  }
+
+  if (Array.isArray(report?.photoUrls)) {
+    report.photoUrls.forEach((url) => addMedia(url, "image"));
+  } else if (report?.photoUrl) {
+    addMedia(report.photoUrl, "image");
+  }
+
+  if (Array.isArray(report?.videoUrls)) {
+    report.videoUrls.forEach((url) => addMedia(url, "video"));
+  } else if (report?.videoUrl) {
+    addMedia(report.videoUrl, "video");
+  }
+
+  return media;
+};
+
 const isAnimalReport = (report) => {
   return (report?.reportType || "").toLowerCase() === "animal"
     || (report?.approximateAge === "N/A" && report?.sex === "N/A");
@@ -126,7 +160,7 @@ export default function Report() {
 
   const [selectedReport, setSelectedReport] = useState(null); // For Details Modal
   const [proofReport, setProofReport] = useState(null); // For Proof Images Modal
-  const [fullscreenImage, setFullscreenImage] = useState(null);
+  const [fullscreenMedia, setFullscreenMedia] = useState(null);
   const [locationReport, setLocationReport] = useState(null);
 
   useEffect(() => {
@@ -418,6 +452,40 @@ export default function Report() {
                   <p className="text-sm text-gray-800 font-medium">{selectedReport.assistanceDescription || "Not specified."}</p>
                 </div>
 
+                {extractReportMedia(selectedReport).length > 0 && (
+                  <div>
+                    <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Captured Media</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {extractReportMedia(selectedReport).map((item, idx) => (
+                        <button
+                          key={`${item.url}-${idx}`}
+                          type="button"
+                          onClick={() => setFullscreenMedia(item)}
+                          className="relative aspect-[4/3] rounded-xl overflow-hidden border border-gray-200 bg-gray-100 text-left"
+                        >
+                          {item.type === "video" ? (
+                            <>
+                              <video src={item.url} className="w-full h-full object-cover" muted playsInline />
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <div className="w-11 h-11 rounded-full bg-white/85 text-gray-800 grid place-items-center shadow-md">
+                                  <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                </div>
+                              </div>
+                              <div className="absolute left-2 top-2 bg-black/65 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                Video
+                              </div>
+                            </>
+                          ) : (
+                            <img src={item.url} alt={`Report media ${idx + 1}`} className="w-full h-full object-cover" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Contact Number</span>
                   <p className="text-sm text-gray-800 font-medium">{selectedReport.contactNumber || "Not provided"}</p>
@@ -500,7 +568,7 @@ export default function Report() {
                   <div 
                     key={idx} 
                     className="aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden cursor-pointer border border-gray-200 hover:border-[#4169E1] hover:shadow-md transition-all group"
-                    onClick={() => setFullscreenImage(url)}
+                    onClick={() => setFullscreenMedia({ url, type: "image" })}
                   >
                     <img src={url} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   </div>
@@ -512,12 +580,28 @@ export default function Report() {
       )}
 
       {/* ── MODAL: FULLSCREEN IMAGE ───────────────────────────────────────── */}
-      {fullscreenImage && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black p-4 animate-in fade-in duration-200" onClick={() => setFullscreenImage(null)}>
+      {fullscreenMedia && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black p-4 animate-in fade-in duration-200" onClick={() => setFullscreenMedia(null)}>
           <button className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
-          <img src={fullscreenImage} alt="Fullscreen Proof" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+          {fullscreenMedia.type === "video" ? (
+            <video
+              src={fullscreenMedia.url}
+              controls
+              autoPlay
+              playsInline
+              className="max-w-full max-h-[90vh] rounded-lg shadow-2xl bg-black"
+              onClick={(event) => event.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={fullscreenMedia.url}
+              alt="Fullscreen Media"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            />
+          )}
         </div>
       )}
 
