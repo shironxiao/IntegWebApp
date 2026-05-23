@@ -434,7 +434,7 @@ function CommentsPanel({ announcement, currentUser, isGuest, onGuestAction, onOp
         <span className="inline-flex items-center gap-2">
           <span>{open ? "Hide Comments" : "View Comments"}</span>
           {!open && count > 0 && (
-            <span className="h-6 px-2 rounded-lg bg-red-500/20 text-red-600 text-xs inline-flex items-center border border-red-200/60">
+            <span className="text-xs text-[#4169E1] inline-flex items-center">
               ({count})
             </span>
           )}
@@ -707,6 +707,20 @@ export default function News() {
     setEndDate("");
   };
 
+  const handleStartDateChange = (value) => {
+    setStartDate(value);
+    if (value && endDate && endDate < value) {
+      setEndDate(value);
+    }
+  };
+
+  const handleEndDateChange = (value) => {
+    if (startDate && value && value < startDate) {
+      return;
+    }
+    setEndDate(value);
+  };
+
   const openMap = (onPick, point, title) => {
     if (onPick) {
       setMapState({ mode: "picker", title: "Pin Sighting Location", point: point || DEFAULT_CENTER, onPick });
@@ -735,26 +749,32 @@ export default function News() {
               className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-[#4169E1] text-sm"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-              className="px-3 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-[#4169E1] text-sm"
-              aria-label="Start date"
-            />
-            <input
-              type="date"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-              className="px-3 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-[#4169E1] text-sm"
-              aria-label="End date"
-            />
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Date Range</label>
             {(startDate || endDate) && (
               <button onClick={clearDateFilter} className="px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200">
                 Clear
               </button>
             )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-center">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(event) => handleStartDateChange(event.target.value)}
+              max={endDate || undefined}
+              className="px-3 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-[#4169E1] text-sm"
+              aria-label="Start date"
+            />
+            <div className="text-sm font-bold text-slate-500 text-center">To</div>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => handleEndDateChange(event.target.value)}
+              min={startDate || undefined}
+              className="px-3 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-[#4169E1] text-sm"
+              aria-label="End date"
+            />
           </div>
         </div>
 
