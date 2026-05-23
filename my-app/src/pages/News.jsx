@@ -41,6 +41,7 @@ const PROOF_KEYS = [
   "evidenceUrl",
   "evidence",
 ];
+const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm", ".m4v", ".avi", ".mkv", ".3gp", ".mpeg", ".mpg"];
 
 function toDate(value) {
   if (!value) return null;
@@ -70,36 +71,48 @@ function statusStyles(status = "") {
   return "bg-amber-50 text-amber-700 border-amber-100";
 }
 
-function addUrls(urls, value) {
-  if (!value) return;
-  if (Array.isArray(value)) {
-    value.forEach((item) => addUrls(urls, item));
-    return;
-  }
-  if (typeof value === "string") {
+function isVideoUrl(url = "") {
+  const normalized = String(url).toLowerCase().split("?")[0].split("#")[0];
+  return VIDEO_EXTENSIONS.some((extension) => normalized.endsWith(extension))
+    || normalized.includes("/video/upload/")
+    || normalized.includes("resource_type/video");
+}
+
+function extractProofMedia(announcement) {
+  const media = [];
+  const seen = new Set();
+  const addMedia = (value) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach(addMedia);
+      return;
+    }
+    if (typeof value !== "string") return;
+
     value
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean)
-      .forEach((item) => urls.add(item));
-  }
-}
+      .forEach((url) => {
+        if (seen.has(url)) return;
+        seen.add(url);
+        media.push({ url, type: isVideoUrl(url) ? "video" : "image" });
+      });
+  };
 
-function extractProofUrls(announcement) {
-  const urls = new Set();
-  PROOF_KEYS.forEach((key) => addUrls(urls, announcement?.[key]));
+  PROOF_KEYS.forEach((key) => addMedia(announcement?.[key]));
 
   if (Array.isArray(announcement?.statusUpdates)) {
     announcement.statusUpdates.forEach((update) => {
       if (update && typeof update === "object") {
         ["proofUrls", "proofImages", "evidenceUrls", "evidenceImages", "evidence", "proof"].forEach((key) => {
-          addUrls(urls, update[key]);
+          addMedia(update[key]);
         });
       }
     });
   }
 
-  return Array.from(urls);
+  return media;
 }
 
 async function reverseGeocode(lat, lng) {
@@ -198,27 +211,38 @@ function MapModal({ mode, title, initialPoint, onClose, onSelect }) {
   );
 }
 
-function FullscreenImage({ url, onClose }) {
+function FullscreenMedia({ media, onClose }) {
   return (
     <div className="fixed inset-0 z-[80] bg-black flex items-center justify-center p-4" onClick={onClose}>
-      <button className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 grid place-items-center" aria-label="Close image">
+      <button className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 grid place-items-center" aria-label="Close media">
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
         </svg>
       </button>
-      <img src={url} alt="Full view" className="max-w-full max-h-[92vh] object-contain rounded-lg" onClick={(event) => event.stopPropagation()} />
+      {media.type === "video" ? (
+        <video
+          src={media.url}
+          controls
+          autoPlay
+          playsInline
+          className="max-w-full max-h-[92vh] rounded-lg bg-black"
+          onClick={(event) => event.stopPropagation()}
+        />
+      ) : (
+        <img src={media.url} alt="Full view" className="max-w-full max-h-[92vh] object-contain rounded-lg" onClick={(event) => event.stopPropagation()} />
+      )}
     </div>
   );
 }
 
-function ProofDialog({ announcement, onClose, onImageClick }) {
-  const urls = extractProofUrls(announcement);
+function ProofDialog({ announcement, onClose, onMediaClick }) {
+  const media = extractProofMedia(announcement);
 
   return (
     <div className="fixed inset-0 z-[60] bg-slate-950/70 flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl max-h-[88vh] overflow-hidden flex flex-col">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-lg font-black text-red-500">Case Closed Photos</h2>
+          <h2 className="text-lg font-black text-red-500">Case Closed Proof</h2>
           <button onClick={onClose} className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 grid place-items-center" aria-label="Close proof photos">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
@@ -227,9 +251,25 @@ function ProofDialog({ announcement, onClose, onImageClick }) {
         </div>
         <div className="p-6 overflow-y-auto">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {urls.map((url) => (
-              <button key={url} onClick={() => onImageClick(url)} className="aspect-[3/4] rounded-xl overflow-hidden border border-slate-200 bg-slate-100 hover:border-[#4169E1]">
-                <img src={url} alt="Proof" className="w-full h-full object-cover" />
+            {media.map((item) => (
+              <button key={item.url} onClick={() => onMediaClick(item)} className="aspect-[3/4] rounded-xl overflow-hidden border border-slate-200 bg-slate-100 hover:border-[#4169E1] relative">
+                {item.type === "video" ? (
+                  <>
+                    <video src={item.url} className="w-full h-full object-cover" muted playsInline />
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                      <div className="w-11 h-11 rounded-full bg-white/85 text-slate-800 grid place-items-center shadow-md">
+                        <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="absolute left-2 top-2 bg-black/65 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                      Video
+                    </div>
+                  </>
+                ) : (
+                  <img src={item.url} alt="Proof" className="w-full h-full object-cover" />
+                )}
               </button>
             ))}
           </div>
@@ -507,7 +547,7 @@ function CommentsPanel({ announcement, currentUser, isGuest, onGuestAction, onOp
 function AnnouncementCard({ announcement, currentUser, isGuest, onGuestAction, onMapRequest, onProofRequest, onImageClick }) {
   const status = announcement.status || "Verified by Police";
   const isClosedOrResolved = /closed|resolved|located/i.test(status);
-  const proofUrls = extractProofUrls(announcement);
+  const proofMedia = extractProofMedia(announcement);
   const dateTime = [announcement.incidentDate, announcement.incidentTime].filter(Boolean).join(" at ");
 
   return (
@@ -577,12 +617,12 @@ function AnnouncementCard({ announcement, currentUser, isGuest, onGuestAction, o
           <p className="mt-3 text-sm font-bold text-slate-500">Contact: {announcement.contact}</p>
         )}
 
-        {isClosedOrResolved && proofUrls.length > 0 && (
+        {isClosedOrResolved && proofMedia.length > 0 && (
           <button
             onClick={() => onProofRequest(announcement)}
             className="mt-4 w-full rounded-xl border border-red-100 bg-red-50 text-red-600 font-black py-3 hover:bg-red-100"
           >
-            View Case Closed Photos
+            View Case Closed Proof
           </button>
         )}
       </div>
@@ -609,7 +649,7 @@ export default function News() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [syncError, setSyncError] = useState("");
-  const [fullscreenImage, setFullscreenImage] = useState(null);
+  const [fullscreenMedia, setFullscreenMedia] = useState(null);
   const [proofAnnouncement, setProofAnnouncement] = useState(null);
   const [mapState, setMapState] = useState(null);
   const [showAccountDialog, setShowAccountDialog] = useState(false);
@@ -745,7 +785,7 @@ export default function News() {
                 onGuestAction={() => setShowAccountDialog(true)}
                 onMapRequest={openMap}
                 onProofRequest={setProofAnnouncement}
-                onImageClick={setFullscreenImage}
+                onImageClick={(url) => setFullscreenMedia({ url, type: "image" })}
               />
             ))}
           </div>
@@ -763,11 +803,11 @@ export default function News() {
         <ProofDialog
           announcement={proofAnnouncement}
           onClose={() => setProofAnnouncement(null)}
-          onImageClick={setFullscreenImage}
+          onMediaClick={setFullscreenMedia}
         />
       )}
 
-      {fullscreenImage && <FullscreenImage url={fullscreenImage} onClose={() => setFullscreenImage(null)} />}
+      {fullscreenMedia && <FullscreenMedia media={fullscreenMedia} onClose={() => setFullscreenMedia(null)} />}
 
       {mapState && (
         <MapModal

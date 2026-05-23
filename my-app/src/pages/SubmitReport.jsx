@@ -61,6 +61,35 @@ function buildMediaPreview(file) {
   };
 }
 
+function getVideoDuration(file) {
+  return new Promise((resolve, reject) => {
+    const tempUrl = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+
+    const cleanup = () => {
+      URL.revokeObjectURL(tempUrl);
+      video.removeAttribute("src");
+      video.load();
+    };
+
+    video.onloadedmetadata = () => {
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      cleanup();
+      resolve(duration);
+    };
+
+    video.onerror = () => {
+      cleanup();
+      reject(new Error(`Couldn't read video length for ${file.name}.`));
+    };
+
+    video.src = tempUrl;
+  });
+}
+
 export default function SubmitReport() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
@@ -212,18 +241,55 @@ export default function SubmitReport() {
     };
   }, []);
 
-  const handleMediaSelect = (e) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files).filter((file) =>
-        file.type.startsWith("image/") || file.type.startsWith("video/")
-      );
-      const previews = files.map(buildMediaPreview);
-      updateActiveReportData({
-        mediaFiles: [...activeReportData.mediaFiles, ...files],
-        mediaPreviews: [...activeReportData.mediaPreviews, ...previews],
-      });
-      e.target.value = "";
+  const handleMediaSelect = async (e) => {
+    const input = e.target;
+    if (!input.files) return;
+
+    const selectedFiles = Array.from(input.files).filter((file) =>
+      file.type.startsWith("image/") || file.type.startsWith("video/")
+    );
+
+    const acceptedFiles = [];
+    const rejectedVideos = [];
+
+    for (const file of selectedFiles) {
+      if (!file.type.startsWith("video/")) {
+        acceptedFiles.push(file);
+        continue;
+      }
+
+      try {
+        const duration = await getVideoDuration(file);
+        if (duration <= 30) {
+          acceptedFiles.push(file);
+        } else {
+          rejectedVideos.push(`${file.name} (${Math.ceil(duration)}s)`);
+        }
+      } catch {
+        rejectedVideos.push(file.name);
+      }
     }
+
+    if (acceptedFiles.length > 0) {
+      const previews = acceptedFiles.map(buildMediaPreview);
+      setReportTypeData((prev) => {
+        const current = prev[formData.reportType];
+        return {
+          ...prev,
+          [formData.reportType]: {
+            ...current,
+            mediaFiles: [...current.mediaFiles, ...acceptedFiles],
+            mediaPreviews: [...current.mediaPreviews, ...previews],
+          },
+        };
+      });
+    }
+
+    if (rejectedVideos.length > 0) {
+      alert(`Videos must be 30 seconds or shorter.\n\nNot added:\n${rejectedVideos.join("\n")}`);
+    }
+
+    input.value = "";
   };
 
   const removeMedia = (index) => {
@@ -578,6 +644,7 @@ export default function SubmitReport() {
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                   Media {formData.reportType === "Animal" ? "(Required)" : "(Optional)"}
                 </label>
+                <p className="text-xs text-gray-400">Video capture and uploads are limited to 30 seconds maximum.</p>
                 
                 {activeReportData.mediaPreviews.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">

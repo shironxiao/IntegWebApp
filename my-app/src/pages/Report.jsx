@@ -37,32 +37,75 @@ const getStatusStyles = (status) => {
   }
 };
 
-const extractProofUrls = (report) => {
-  const urls = new Set();
-  const topLevelKeys = ["proofImages", "proofUrls", "proofImage", "proofUrl", "proof", "resolutionImages", "resolutionImage", "evidenceImages", "evidenceUrls", "evidenceImage", "evidenceUrl", "evidence"];
-  
-  topLevelKeys.forEach(key => {
-    const val = report[key];
-    if (val) {
-      if (Array.isArray(val)) val.forEach(v => urls.add(v));
-      else if (typeof val === "string") val.split(",").forEach(v => urls.add(v.trim()));
+const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm", ".m4v", ".avi", ".mkv", ".3gp", ".mpeg", ".mpg"];
+
+const isVideoUrl = (url = "") => {
+  const normalized = String(url).toLowerCase().split("?")[0].split("#")[0];
+  return VIDEO_EXTENSIONS.some((extension) => normalized.endsWith(extension))
+    || normalized.includes("/video/upload/")
+    || normalized.includes("resource_type/video");
+};
+
+const getResolvedAdminNotes = (report) => {
+  const directNotes = [report?.resolutionNotes, report?.adminNotes, report?.notes, report?.resolution]
+    .find((value) => typeof value === "string" && value.trim());
+  if (directNotes) return directNotes.trim();
+
+  if (Array.isArray(report?.statusUpdates)) {
+    for (let index = report.statusUpdates.length - 1; index >= 0; index -= 1) {
+      const update = report.statusUpdates[index];
+      if (!update || typeof update !== "object") continue;
+      const status = String(update.status || "").toLowerCase();
+      if (!/resolved|closed|located/.test(status)) continue;
+
+      const updateNotes = [update.adminNotes, update.resolutionNotes, update.notes, update.message, update.remark]
+        .find((value) => typeof value === "string" && value.trim());
+      if (updateNotes) return updateNotes.trim();
     }
+  }
+
+  return "";
+};
+
+const extractProofMedia = (report) => {
+  const media = [];
+  const seen = new Set();
+  const topLevelKeys = ["proofImages", "proofUrls", "proofImage", "proofUrl", "proof", "resolutionImages", "resolutionImage", "evidenceImages", "evidenceUrls", "evidenceImage", "evidenceUrl", "evidence"];
+
+  const addMedia = (value) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach(addMedia);
+      return;
+    }
+    if (typeof value !== "string") return;
+
+    value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .forEach((url) => {
+        if (seen.has(url)) return;
+        seen.add(url);
+        media.push({ url, type: isVideoUrl(url) ? "video" : "image" });
+      });
+  };
+
+  topLevelKeys.forEach(key => {
+    addMedia(report[key]);
   });
 
   if (Array.isArray(report.statusUpdates)) {
     report.statusUpdates.forEach(update => {
       if (update && typeof update === "object") {
         ["proofUrls", "proofImages", "evidenceUrls", "evidenceImages", "evidence", "proof"].forEach(k => {
-          const val = update[k];
-          if (val) {
-            if (Array.isArray(val)) val.forEach(v => urls.add(v));
-            else if (typeof val === "string") val.split(",").forEach(v => urls.add(v.trim()));
-          }
+          addMedia(update[k]);
         });
       }
     });
   }
-  return Array.from(urls).filter(url => url);
+
+  return media;
 };
 
 const extractReportMedia = (report) => {
@@ -281,7 +324,7 @@ export default function Report() {
               const styles = getStatusStyles(statusStr);
               const assistance = report.assistanceDescription || "—";
               const isResolved = statusStr.toLowerCase().includes("resolved") || statusStr.toLowerCase().includes("closed");
-              const proofUrls = extractProofUrls(report);
+              const proofMedia = extractProofMedia(report);
               const isAnimal = isAnimalReport(report);
 
               return (
@@ -365,7 +408,7 @@ export default function Report() {
                     </button>
                     
                     <div className="flex gap-2">
-                      {isResolved && proofUrls.length > 0 && (
+                      {isResolved && proofMedia.length > 0 && (
                         <button 
                           onClick={() => setProofReport(report)}
                           className="text-[12px] font-bold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors"
@@ -506,19 +549,22 @@ export default function Report() {
                 {(selectedReport.status?.toLowerCase().includes("resolved") || selectedReport.status?.toLowerCase().includes("closed")) && (
                   <div className="mt-6 pt-6 border-t border-gray-100">
                     <h3 className="text-sm font-black text-gray-800 mb-3">Resolution Details</h3>
-                    {(selectedReport.resolutionNotes || selectedReport.notes || selectedReport.resolution) && (
-                      <p className="text-sm text-gray-600 mb-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                        {selectedReport.resolutionNotes || selectedReport.notes || selectedReport.resolution}
-                      </p>
+                    {getResolvedAdminNotes(selectedReport) && (
+                      <div className="mb-4">
+                        <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Admin Notes</span>
+                        <p className="text-sm text-gray-600 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                          {getResolvedAdminNotes(selectedReport)}
+                        </p>
+                      </div>
                     )}
-                    
-                    {extractProofUrls(selectedReport).length > 0 && (
+
+                    {extractProofMedia(selectedReport).length > 0 && (
                       <button 
                         onClick={() => { setSelectedReport(null); setProofReport(selectedReport); }}
                         className="w-full bg-gray-50 hover:bg-gray-100 text-gray-800 font-bold py-3 rounded-xl border border-gray-200 transition-colors flex items-center justify-center gap-2"
                       >
                         <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L28 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        View Resolution Proof Images
+                        View Resolution Proof
                       </button>
                     )}
                   </div>
@@ -564,13 +610,29 @@ export default function Report() {
             
             <div className="p-6 overflow-y-auto">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {extractProofUrls(proofReport).map((url, idx) => (
+                {extractProofMedia(proofReport).map((item, idx) => (
                   <div 
                     key={idx} 
                     className="aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden cursor-pointer border border-gray-200 hover:border-[#4169E1] hover:shadow-md transition-all group"
-                    onClick={() => setFullscreenMedia({ url, type: "image" })}
+                    onClick={() => setFullscreenMedia(item)}
                   >
-                    <img src={url} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    {item.type === "video" ? (
+                      <div className="relative w-full h-full">
+                        <video src={item.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" muted playsInline />
+                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <div className="w-11 h-11 rounded-full bg-white/85 text-gray-800 grid place-items-center shadow-md">
+                            <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="absolute left-2 top-2 bg-black/65 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                          Video
+                        </div>
+                      </div>
+                    ) : (
+                      <img src={item.url} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    )}
                   </div>
                 ))}
               </div>
