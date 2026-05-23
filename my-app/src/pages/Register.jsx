@@ -415,10 +415,6 @@ export default function Register() {
           {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Create Account"}
         </button>
 
-        {/* Back to Login */}
-        <div className="text-center">
-          <button onClick={() => navigate("/")} className="text-sm font-medium text-blue-500 hover:text-blue-600 hover:underline">Go back to Menu</button>
-        </div>
       </div>
 
       {/* Terms Modal */}
