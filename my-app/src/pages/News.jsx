@@ -30,10 +30,10 @@ L.Icon.Default.mergeOptions({
 const DEFAULT_CENTER = { lat: 14.676, lng: 121.0437 };
 const VISIBLE_ANNOUNCEMENT_STATUSES = [
   "active",
-  "reported",
-  "verified by police",
-  "search ongoing",
-  "case closed",
+  "Reported",
+  "Verified by Police",
+  "Search Ongoing",
+  "Case Closed",
 ];
 const PROOF_KEYS = [
   "proofImages",
