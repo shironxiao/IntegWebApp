@@ -1,5 +1,8 @@
 {
-  "dependencies": {
-    "react-router-dom": "^7.15.1"
+  "name": "integwebapp-root",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix my-app run build",
+    "vercel-build": "npm --prefix my-app run build"
   }
 }
