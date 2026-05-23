@@ -757,22 +757,22 @@ export default function News() {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-center">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 sm:gap-3 items-center">
             <input
               type="date"
               value={startDate}
               onChange={(event) => handleStartDateChange(event.target.value)}
               max={endDate || undefined}
-              className="px-3 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-[#4169E1] text-sm"
+              className="min-w-0 w-full px-2.5 sm:px-3 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-[#4169E1] text-sm"
               aria-label="Start date"
             />
-            <div className="text-sm font-bold text-slate-500 text-center">To</div>
+            <div className="text-xs sm:text-sm font-bold text-slate-500 text-center px-1">To</div>
             <input
               type="date"
               value={endDate}
               onChange={(event) => handleEndDateChange(event.target.value)}
               min={startDate || undefined}
-              className="px-3 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-[#4169E1] text-sm"
+              className="min-w-0 w-full px-2.5 sm:px-3 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-[#4169E1] text-sm"
               aria-label="End date"
             />
           </div>
