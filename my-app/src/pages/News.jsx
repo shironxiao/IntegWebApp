@@ -429,14 +429,16 @@ function CommentsPanel({ announcement, currentUser, isGuest, onGuestAction, onOp
           if (!open) setIsLoading(true);
           setOpen((value) => !value);
         }}
-        className="w-full px-4 py-3 flex items-center justify-between text-sm font-bold text-[#4169E1] hover:bg-blue-50/60"
+        className="w-full px-4 py-3 flex items-center text-sm font-bold text-[#4169E1] hover:bg-blue-50/60"
       >
-        <span>{open ? "Hide Comments" : "View Comments"}</span>
-        {!open && count > 0 && (
-          <span className="min-w-7 h-6 px-2 rounded-lg bg-red-500/20 text-red-600 text-xs grid place-items-center border border-red-200/60">
-            {count}
-          </span>
-        )}
+        <span className="inline-flex items-center gap-2">
+          <span>{open ? "Hide Comments" : "View Comments"}</span>
+          {!open && count > 0 && (
+            <span className="h-6 px-2 rounded-lg bg-red-500/20 text-red-600 text-xs inline-flex items-center border border-red-200/60">
+              ({count})
+            </span>
+          )}
+        </span>
       </button>
 
       {open && (
