@@ -13,6 +13,7 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
@@ -27,6 +28,13 @@ L.Icon.Default.mergeOptions({
 });
 
 const DEFAULT_CENTER = { lat: 14.676, lng: 121.0437 };
+const VISIBLE_ANNOUNCEMENT_STATUSES = [
+  "active",
+  "reported",
+  "verified by police",
+  "search ongoing",
+  "case closed",
+];
 const PROOF_KEYS = [
   "proofImages",
   "proofUrls",
@@ -667,6 +675,7 @@ export default function News() {
   useEffect(() => {
     const announcementsQuery = query(
       collection(db, "announcements"),
+      where("status", "in", VISIBLE_ANNOUNCEMENT_STATUSES),
       orderBy("timestamp", "desc")
     );
     const unsubscribe = onSnapshot(
