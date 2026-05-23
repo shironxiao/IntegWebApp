@@ -13,7 +13,6 @@ import {
   query,
   serverTimestamp,
   updateDoc,
-  where,
 } from "firebase/firestore";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
@@ -668,13 +667,19 @@ export default function News() {
   useEffect(() => {
     const announcementsQuery = query(
       collection(db, "announcements"),
-      where("status", "==", "active"),
       orderBy("timestamp", "desc")
     );
     const unsubscribe = onSnapshot(
       announcementsQuery,
       (snapshot) => {
-        setAnnouncements(snapshot.docs.map((snap) => ({ id: snap.id, ...snap.data() })));
+        setAnnouncements(
+          snapshot.docs
+            .map((snap) => ({ id: snap.id, ...snap.data() }))
+            .filter((announcement) => {
+              const status = String(announcement.status || "").toLowerCase();
+              return status !== "archived" && status !== "deleted";
+            })
+        );
         setIsLoading(false);
         setSyncError("");
       },
