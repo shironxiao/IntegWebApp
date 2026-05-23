@@ -1,0 +1,221 @@
+<svg width="1400" height="2000" viewBox="0 0 1400 2000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="headerGradient" x1="0" y1="0" x2="1400" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="panelGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F8FAFC"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#0F172A" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title { font: 800 54px Arial, Helvetica, sans-serif; fill: #FFFFFF; }
+      .subtitle { font: 500 24px Arial, Helvetica, sans-serif; fill: #DBEAFE; }
+      .section { font: 800 26px Arial, Helvetica, sans-serif; fill: #0F172A; }
+      .body { font: 500 22px Arial, Helvetica, sans-serif; fill: #334155; }
+      .small { font: 500 18px Arial, Helvetica, sans-serif; fill: #475569; }
+      .label { font: 700 18px Arial, Helvetica, sans-serif; fill: #1D4ED8; letter-spacing: 1px; text-transform: uppercase; }
+      .featureTitle { font: 700 21px Arial, Helvetica, sans-serif; fill: #0F172A; }
+      .featureText { font: 500 17px Arial, Helvetica, sans-serif; fill: #475569; }
+      .pill { font: 700 18px Arial, Helvetica, sans-serif; fill: #1E3A8A; }
+      .tiny { font: 700 15px Arial, Helvetica, sans-serif; fill: #64748B; letter-spacing: 1px; text-transform: uppercase; }
+      .mockTitle { font: 700 20px Arial, Helvetica, sans-serif; fill: #0F172A; }
+      .mockText { font: 500 14px Arial, Helvetica, sans-serif; fill: #475569; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="2000" fill="#EAF1FF"/>
+  <circle cx="1195" cy="155" r="180" fill="#60A5FA" fill-opacity="0.12"/>
+  <circle cx="178" cy="1880" r="210" fill="#4F46E5" fill-opacity="0.10"/>
+
+  <rect x="54" y="44" width="1292" height="1912" rx="40" fill="url(#panelGradient)" filter="url(#softShadow)"/>
+
+  <rect x="54" y="44" width="1292" height="288" rx="40" fill="url(#headerGradient)"/>
+  <rect x="54" y="248" width="1292" height="84" fill="url(#headerGradient)"/>
+
+  <g transform="translate(104 96)">
+    <rect x="0" y="0" width="86" height="86" rx="24" fill="rgba(255,255,255,0.16)"/>
+    <path d="M43 13C62.33 13 78 28.67 78 48C78 67.33 62.33 83 43 83C23.67 83 8 67.33 8 48C8 28.67 23.67 13 43 13Z" fill="white" fill-opacity="0.12"/>
+    <path d="M43 20L61 29V45C61 58.4 53.2 70.82 43 76C32.8 70.82 25 58.4 25 45V29L43 20Z" fill="white"/>
+    <path d="M34 47.5L40 53.5L54.5 39" stroke="#2563EB" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="214" y="136" class="label" fill="#BFDBFE">Community Support Platform</text>
+  <text x="214" y="198" class="title">StreetAssist: A Web-Based Reporting and</text>
+  <text x="214" y="258" class="title">Assistance System</text>
+  <text x="214" y="304" class="subtitle">Reporting, tracking, and response management for community assistance cases</text>
+
+  <rect x="104" y="372" width="1192" height="136" rx="28" fill="#EFF6FF" stroke="#BFDBFE"/>
+  <text x="136" y="417" class="label">Overview</text>
+  <text x="136" y="458" class="body">StreetAssist is a web-based system that allows residents to report homeless cases using location and</text>
+  <text x="136" y="491" class="body">descriptions. It helps barangay or social welfare admins track, manage, and respond to reports efficiently</text>
+  <text x="136" y="524" class="body">through a centralized dashboard.</text>
+
+  <rect x="104" y="548" width="572" height="234" rx="28" fill="#FFFFFF" stroke="#D9E6FF"/>
+  <text x="136" y="596" class="section">Problem Statement</text>
+  <circle cx="146" cy="637" r="6" fill="#2563EB"/>
+  <text x="166" y="644" class="body">Manual reporting is slow and unorganized</text>
+  <circle cx="146" cy="686" r="6" fill="#2563EB"/>
+  <text x="166" y="693" class="body">No centralized tracking for cases and updates</text>
+  <circle cx="146" cy="735" r="6" fill="#2563EB"/>
+  <text x="166" y="742" class="body">Delayed response to community reports</text>
+
+  <rect x="724" y="548" width="572" height="234" rx="28" fill="#FFFFFF" stroke="#D9E6FF"/>
+  <text x="756" y="596" class="section">Objectives</text>
+  <circle cx="766" cy="637" r="6" fill="#4F46E5"/>
+  <text x="786" y="644" class="body">Enable easy online reporting of cases</text>
+  <circle cx="766" cy="686" r="6" fill="#4F46E5"/>
+  <text x="786" y="693" class="body">Improve tracking and monitoring of reports</text>
+  <circle cx="766" cy="735" r="6" fill="#4F46E5"/>
+  <text x="786" y="742" class="body">Provide real-time status updates and admin tools</text>
+
+  <text x="104" y="850" class="section">Key Features</text>
+
+  <g transform="translate(104 884)">
+    <rect x="0" y="0" width="374" height="120" rx="24" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <circle cx="42" cy="42" r="20" fill="#DBEAFE"/>
+    <path d="M42 28L52 34V46C52 53 47.5 59.2 42 62C36.5 59.2 32 53 32 46V34L42 28Z" fill="#2563EB"/>
+    <text x="78" y="44" class="featureTitle">Web-Based Reporting</text>
+    <text x="78" y="74" class="featureText">Residents can submit reports from any device</text>
+    <text x="78" y="97" class="featureText">without installing a mobile application.</text>
+  </g>
+
+  <g transform="translate(513 884)">
+    <rect x="0" y="0" width="374" height="120" rx="24" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <circle cx="42" cy="42" r="20" fill="#DBEAFE"/>
+    <path d="M42 28C48.6 28 54 33.4 54 40C54 48.6 42 60 42 60C42 60 30 48.6 30 40C30 33.4 35.4 28 42 28Z" fill="#2563EB"/>
+    <circle cx="42" cy="40" r="4.5" fill="white"/>
+    <text x="78" y="44" class="featureTitle">Location-Based Reporting</text>
+    <text x="78" y="74" class="featureText">Supports GPS or manual map pinning for</text>
+    <text x="78" y="97" class="featureText">accurate case location details.</text>
+  </g>
+
+  <g transform="translate(922 884)">
+    <rect x="0" y="0" width="374" height="120" rx="24" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <circle cx="42" cy="42" r="20" fill="#E0E7FF"/>
+    <rect x="31" y="31" width="22" height="22" rx="5" fill="#4F46E5"/>
+    <path d="M36 38H48M36 44H48" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <text x="78" y="44" class="featureTitle">Case Tracking System</text>
+    <text x="78" y="74" class="featureText">Users can monitor report progress from</text>
+    <text x="78" y="97" class="featureText">submission up to resolution.</text>
+  </g>
+
+  <g transform="translate(104 1028)">
+    <rect x="0" y="0" width="374" height="120" rx="24" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <circle cx="42" cy="42" r="20" fill="#DCFCE7"/>
+    <path d="M33 48L38.5 53.5L51.5 40.5" stroke="#16A34A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="78" y="44" class="featureTitle">Admin Dashboard</text>
+    <text x="78" y="74" class="featureText">Centralized monitoring and case management</text>
+    <text x="78" y="97" class="featureText">for barangay and social welfare staff.</text>
+  </g>
+
+  <g transform="translate(513 1028)">
+    <rect x="0" y="0" width="374" height="120" rx="24" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <circle cx="42" cy="42" r="20" fill="#FEE2E2"/>
+    <path d="M42 29V42L50 48" stroke="#DC2626" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="42" cy="42" r="12" stroke="#DC2626" stroke-width="4"/>
+    <text x="78" y="44" class="featureTitle">Status Updates</text>
+    <text x="78" y="74" class="featureText">Real-time progress notifications keep users</text>
+    <text x="78" y="97" class="featureText">updated on ongoing assistance cases.</text>
+  </g>
+
+  <g transform="translate(922 1028)">
+    <rect x="0" y="0" width="374" height="120" rx="24" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <circle cx="42" cy="42" r="20" fill="#F3E8FF"/>
+    <path d="M34 34H50V50H34Z" fill="#7C3AED"/>
+    <path d="M39 42H45" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <text x="78" y="44" class="featureTitle">Secure Login</text>
+    <text x="78" y="74" class="featureText">Protected resident access and role-based</text>
+    <text x="78" y="97" class="featureText">user management.</text>
+  </g>
+
+  <text x="104" y="1218" class="section">System Screens</text>
+
+  <g transform="translate(104 1250)">
+    <rect x="0" y="0" width="570" height="390" rx="28" fill="#FFFFFF" stroke="#D9E6FF"/>
+    <rect x="0" y="0" width="570" height="42" rx="28" fill="#EAF1FF"/>
+    <circle cx="28" cy="22" r="6" fill="#94A3B8"/>
+    <circle cx="48" cy="22" r="6" fill="#94A3B8"/>
+    <circle cx="68" cy="22" r="6" fill="#94A3B8"/>
+    <text x="92" y="27" class="mockTitle">Resident Reporting Flow</text>
+    <rect x="28" y="64" width="514" height="54" rx="16" fill="#4169E1"/>
+    <text x="52" y="98" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="800" fill="#FFFFFF">Submit a Report</text>
+    <rect x="28" y="136" width="240" height="176" rx="20" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <text x="48" y="168" class="tiny">Step 1</text>
+    <text x="48" y="202" class="mockTitle">Location and media</text>
+    <rect x="48" y="224" width="200" height="70" rx="18" fill="#DBEAFE"/>
+    <path d="M98 245C106 245 112 251 112 259C112 269 98 281 98 281C98 281 84 269 84 259C84 251 90 245 98 245Z" fill="#2563EB"/>
+    <rect x="128" y="238" width="96" height="12" rx="6" fill="#93C5FD"/>
+    <rect x="128" y="258" width="74" height="10" rx="5" fill="#BFDBFE"/>
+    <rect x="294" y="136" width="248" height="176" rx="20" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <text x="314" y="168" class="tiny">Step 2</text>
+    <text x="314" y="202" class="mockTitle">Details and contact</text>
+    <rect x="314" y="226" width="188" height="14" rx="7" fill="#CBD5E1"/>
+    <rect x="314" y="252" width="208" height="14" rx="7" fill="#CBD5E1"/>
+    <rect x="314" y="278" width="156" height="14" rx="7" fill="#CBD5E1"/>
+    <rect x="28" y="330" width="514" height="34" rx="17" fill="#EEF2FF"/>
+    <text x="48" y="353" class="mockText">Resident flow: Login -> Submit Report -> Track Status</text>
+  </g>
+
+  <g transform="translate(726 1250)">
+    <rect x="0" y="0" width="570" height="390" rx="28" fill="#FFFFFF" stroke="#D9E6FF"/>
+    <rect x="0" y="0" width="570" height="42" rx="28" fill="#EAF1FF"/>
+    <circle cx="28" cy="22" r="6" fill="#94A3B8"/>
+    <circle cx="48" cy="22" r="6" fill="#94A3B8"/>
+    <circle cx="68" cy="22" r="6" fill="#94A3B8"/>
+    <text x="92" y="27" class="mockTitle">Monitoring and Response</text>
+    <rect x="28" y="64" width="514" height="54" rx="16" fill="#0F172A"/>
+    <text x="52" y="98" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="800" fill="#FFFFFF">Case Dashboard</text>
+    <rect x="28" y="138" width="160" height="152" rx="20" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <text x="48" y="170" class="tiny">Queue</text>
+    <rect x="48" y="190" width="120" height="18" rx="9" fill="#FDE68A"/>
+    <rect x="48" y="220" width="104" height="18" rx="9" fill="#BFDBFE"/>
+    <rect x="48" y="250" width="132" height="18" rx="9" fill="#BBF7D0"/>
+    <rect x="208" y="138" width="334" height="152" rx="20" fill="#F8FAFF" stroke="#D9E6FF"/>
+    <text x="228" y="170" class="tiny">Report Detail</text>
+    <rect x="228" y="190" width="206" height="14" rx="7" fill="#CBD5E1"/>
+    <rect x="228" y="216" width="282" height="14" rx="7" fill="#CBD5E1"/>
+    <rect x="228" y="242" width="246" height="14" rx="7" fill="#CBD5E1"/>
+    <rect x="228" y="266" width="108" height="18" rx="9" fill="#DBEAFE"/>
+    <rect x="28" y="308" width="514" height="56" rx="18" fill="#EEF2FF"/>
+    <text x="48" y="333" class="mockText">Admin flow: Login -> View Reports -> Update Status -> Manage Cases</text>
+    <text x="48" y="356" class="mockText">Centralized case tracking improves response coordination.</text>
+  </g>
+
+  <text x="104" y="1712" class="section">Technology Stack</text>
+  <rect x="104" y="1740" width="180" height="54" rx="20" fill="#DBEAFE"/>
+  <text x="155" y="1774" class="pill">React</text>
+  <rect x="302" y="1740" width="180" height="54" rx="20" fill="#E0E7FF"/>
+  <text x="346" y="1774" class="pill">Firebase</text>
+  <rect x="500" y="1740" width="180" height="54" rx="20" fill="#DCFCE7"/>
+  <text x="556" y="1774" class="pill">Leaflet</text>
+  <rect x="698" y="1740" width="180" height="54" rx="20" fill="#FCE7F3"/>
+  <text x="746" y="1774" class="pill">Vercel</text>
+  <rect x="896" y="1740" width="180" height="54" rx="20" fill="#F3E8FF"/>
+  <text x="942" y="1774" class="pill">GitHub</text>
+
+  <rect x="104" y="1828" width="630" height="98" rx="28" fill="#FFFFFF" stroke="#D9E6FF"/>
+  <text x="136" y="1868" class="section">Project Team</text>
+  <text x="136" y="1903" class="small">Developer: __________________   UI Designer: __________________   Documentation: __________________</text>
+
+  <rect x="780" y="1684" width="516" height="242" rx="32" fill="#0F172A"/>
+  <text x="816" y="1732" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="800" fill="#FFFFFF">Scan to Access StreetAssist Web App</text>
+  <text x="816" y="1762" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="500" fill="#CBD5E1">Replace this placeholder with your live Vercel QR code.</text>
+
+  <rect x="816" y="1790" width="112" height="112" rx="8" fill="#FFFFFF"/>
+  <rect x="830" y="1804" width="26" height="26" fill="#0F172A"/>
+  <rect x="888" y="1804" width="26" height="26" fill="#0F172A"/>
+  <rect x="830" y="1862" width="26" height="26" fill="#0F172A"/>
+  <rect x="858" y="1832" width="14" height="14" fill="#0F172A"/>
+  <rect x="874" y="1848" width="14" height="14" fill="#0F172A"/>
+  <rect x="888" y="1876" width="14" height="12" fill="#0F172A"/>
+  <rect x="906" y="1832" width="8" height="24" fill="#0F172A"/>
+
+  <text x="958" y="1824" class="featureTitle" fill="#FFFFFF">Suggested link</text>
+  <text x="958" y="1856" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="500" fill="#E2E8F0">Add your deployed StreetAssist</text>
+  <text x="958" y="1882" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="500" fill="#E2E8F0">URL so judges can open the</text>
+  <text x="958" y="1908" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="500" fill="#E2E8F0">live system directly from the poster.</text>
+</svg>

@@ -433,7 +433,7 @@ function CommentsPanel({ announcement, currentUser, isGuest, onGuestAction, onOp
       >
         <span>{open ? "Hide Comments" : "View Comments"}</span>
         {!open && count > 0 && (
-          <span className="min-w-6 h-6 px-2 rounded-full bg-red-500 text-white text-xs grid place-items-center">
+          <span className="min-w-7 h-6 px-2 rounded-lg bg-red-500/20 text-red-600 text-xs grid place-items-center border border-red-200/60">
             {count}
           </span>
         )}

@@ -754,7 +754,6 @@ export default function SubmitReport() {
                       <option value="">Select...</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
-                      <option value="Unknown">Unknown</option>
                     </select>
                   </div>
                 </div>
