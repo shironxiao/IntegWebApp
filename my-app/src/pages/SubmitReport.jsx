@@ -102,6 +102,7 @@ export default function SubmitReport() {
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [fullscreenPreview, setFullscreenPreview] = useState(null);
+  const [consentDialog, setConsentDialog] = useState(null);
   const searchTimeoutRef = useRef(null);
   const searchContainerRef = useRef(null);
   const reportTypeDataRef = useRef(null);
@@ -290,6 +291,21 @@ export default function SubmitReport() {
     }
 
     input.value = "";
+  };
+
+  const requestMediaConsent = (action) => {
+    setConsentDialog(action);
+  };
+
+  const proceedWithMediaAction = () => {
+    if (consentDialog === "capture-image") {
+      capturePhotoInputRef.current?.click();
+    } else if (consentDialog === "capture-video") {
+      captureVideoInputRef.current?.click();
+    } else if (consentDialog === "upload-media") {
+      uploadMediaInputRef.current?.click();
+    }
+    setConsentDialog(null);
   };
 
   const removeMedia = (index) => {
@@ -681,7 +697,7 @@ export default function SubmitReport() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     type="button"
-                    onClick={() => capturePhotoInputRef.current?.click()}
+                    onClick={() => requestMediaConsent("capture-image")}
                     className="h-16 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#4169E1] hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm font-bold text-[#4169E1]"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7.5A2.25 2.25 0 0 1 5.25 5.25h1.386a2.25 2.25 0 0 0 1.59-.659l.515-.515A2.25 2.25 0 0 1 10.332 3h3.336a2.25 2.25 0 0 1 1.591.659l.515.515a2.25 2.25 0 0 0 1.59.659h1.386A2.25 2.25 0 0 1 21 7.5v9.75A2.25 2.25 0 0 1 18.75 19.5H5.25A2.25 2.25 0 0 1 3 17.25V7.5Z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" /></svg>
@@ -689,7 +705,7 @@ export default function SubmitReport() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => captureVideoInputRef.current?.click()}
+                    onClick={() => requestMediaConsent("capture-video")}
                     className="h-16 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#4169E1] hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm font-bold text-[#4169E1]"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m15.75 10.5 4.72-2.36A.75.75 0 0 1 21.75 8.81v6.38a.75.75 0 0 1-1.28.67l-4.72-2.36m0-3v3m-10.5 5.25h9a2.25 2.25 0 0 0 2.25-2.25v-7.5a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 3 9v7.5a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
@@ -697,7 +713,7 @@ export default function SubmitReport() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => uploadMediaInputRef.current?.click()}
+                    onClick={() => requestMediaConsent("upload-media")}
                     className="h-16 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#4169E1] hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm font-bold text-[#4169E1]"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v.75A2.25 2.25 0 0 0 5.25 19.5h13.5A2.25 2.25 0 0 0 21 17.25v-.75M7.5 10.5 12 6m0 0 4.5 4.5M12 6v12" /></svg>
@@ -915,6 +931,33 @@ export default function SubmitReport() {
               onClick={(event) => event.stopPropagation()}
             />
           )}
+        </div>
+      )}
+
+      {consentDialog && (
+        <div className="fixed inset-0 z-[75] bg-black/50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6">
+            <h2 className="text-xl font-black text-gray-800 mb-2">Consent Required</h2>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Please confirm that you already have consent to capture an image or video, or to upload media for this report.
+            </p>
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConsentDialog(null)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={proceedWithMediaAction}
+                className="px-4 py-2.5 rounded-xl bg-[#4169E1] text-white font-bold"
+              >
+                Yes, proceed
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
